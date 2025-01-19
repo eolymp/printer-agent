@@ -44,6 +44,8 @@ func main() {
 		_, _ = fmt.Fprintf(f, "Version: %s (%s)\n", version, commit)
 		_, _ = fmt.Fprintln(f, "Options:")
 		flag.PrintDefaults()
+		_, _ = fmt.Fprintln(f, "")
+		_, _ = fmt.Fprintln(f, "Learn more: https://github.com/eolymp/printer-agent/blob/main/README.md")
 	}
 
 	flag.StringVar(&config.PrinterURL, "printer", "", "Printer URL. Use \"ipps\" schema to connect with TLS, add username and password to authenticate.")
