@@ -1,0 +1,49 @@
+name: release
+
+on: [ push ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    container:
+      image: alpine:edge
+    steps:
+      - name: Prepare
+        run: |
+          apk -U add git go make docker
+          git config --global --add safe.directory $(pwd)
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Credentials
+        run: |
+          echo "machine github.com login x-oauth-basic password ${{ secrets.eolymp_bot_github_token }}" > $HOME/.netrc
+          docker login -u x-oauth-basic -p "${{ secrets.github_token }}" ghcr.io
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: |
+          GOOS=linux GOARCH=amd64 BUILD_SUFFIX=-linux-amd64 make build
+          GOOS=linux GOARCH=arm64 BUILD_SUFFIX=-linux-arm64 make build
+          GOOS=darwin GOARCH=amd64 BUILD_SUFFIX=-darwin-amd64 make build
+          GOOS=darwin GOARCH=arm64 BUILD_SUFFIX=-darwin-arm64 make build
+          GOOS=windows GOARCH=amd64 BUILD_SUFFIX=-windows-amd64.exe make build
+          GOOS=windows GOARCH=arm64 BUILD_SUFFIX=-windows-arm64.exe make build
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            eolymp-printer-linux-amd64
+            eolymp-printer-linux-arm64
+            eolymp-printer-darwin-amd64
+            eolymp-printer-darwin-arm64
+            eolymp-printer-windows-amd64.exe
+            eolymp-printer-windows-arm64.exe

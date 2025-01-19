@@ -16,11 +16,15 @@ import (
 	"time"
 
 	printerpb "github.com/eolymp/go-sdk/eolymp/printer"
+	"github.com/eolymp/printer-agent/pkg/connector"
 	"github.com/eolymp/printer-agent/pkg/ipp"
 	"github.com/eolymp/printer-agent/pkg/messages"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
 )
+
+var version = "0.0.0"
+var commit = "HEAD"
 
 var config struct {
 	PrinterURL string
@@ -36,6 +40,7 @@ func main() {
 	flag.Usage = func() {
 		f := flag.CommandLine.Output()
 		_, _ = fmt.Fprintf(f, "Usage: %s [options]\n", os.Args[0])
+		_, _ = fmt.Fprintf(f, "Version: %s (%s)\n", version, commit)
 		_, _ = fmt.Fprintln(f, "Options:")
 		flag.PrintDefaults()
 	}
@@ -60,7 +65,7 @@ func main() {
 	printer := ipp.New(config.PrinterURL)
 
 	// connect to printing server
-	cli, err := ConnectToServer()
+	cli, err := connector.Connect(config.ServerURL)
 	if err != nil {
 		fail("Failed to connect to printing server: %v", err)
 	}
@@ -151,7 +156,7 @@ func run(ctx context.Context, cli printerpb.PrinterConnectorClient, printer *ipp
 
 	// start a routine watching printer state
 	state := make(chan ipp.PrinterState)
-	eg.Go(WatchPrinterState(ctx, printer, state))
+	eg.Go(printer.WatchPrinterState(ctx, state))
 
 	// start a control flow routine
 	eg.Go(func() error {

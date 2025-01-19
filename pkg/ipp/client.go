@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/OpenPrinting/goipp"
 )
@@ -210,4 +211,57 @@ func (c *Client) SendRequest(ctx context.Context, in *goipp.Message, payload io.
 	}
 
 	return &out, nil
+}
+
+func (c *Client) WatchPrinterState(ctx context.Context, state chan<- PrinterState) func() error {
+	return func() error {
+		for {
+			attrs, err := c.PrinterAttributes(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get printer attributes: %w", err)
+			}
+
+			// send printer state
+			select {
+			case state <- attrs.State:
+			case <-ctx.Done():
+				return nil
+			}
+
+			// wait for 3 seconds before next check
+			select {
+			case <-time.After(3 * time.Second):
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	}
+}
+
+func (c *Client) WatchJobState(ctx context.Context, job int, state chan<- JobState) func() error {
+	return func() error {
+		prev := JobPending
+
+		for {
+			attrs, err := c.JobAttributes(ctx, job)
+			if err != nil {
+				return fmt.Errorf("failed to get job attributes: %w", err)
+			}
+
+			if prev != attrs.State {
+				select {
+				case state <- attrs.State:
+					prev = attrs.State
+				case <-ctx.Done():
+					return nil
+				}
+			}
+
+			select {
+			case <-time.After(5 * time.Second):
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	}
 }
