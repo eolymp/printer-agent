@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	github.com/OpenPrinting/goipp v1.1.0
-	github.com/eolymp/go-sdk v0.0.0-20250109001253-c4f915e22fca
+	github.com/eolymp/go-sdk v0.0.0-20250119101847-6c30c9f40208
 	github.com/phin1x/go-ipp v1.6.1
 	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.69.2

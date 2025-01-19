@@ -25,6 +25,7 @@ import (
 var config struct {
 	PrinterURL string
 	ServerURL  string
+	JobTTL     time.Duration
 	Space      string
 	Token      string
 }
@@ -43,6 +44,7 @@ func main() {
 	flag.StringVar(&config.ServerURL, "server", "https://printer.eolymp.com", "Server hostname")
 	flag.StringVar(&config.Space, "space", "", "Space ID where printer is hosted")
 	flag.StringVar(&config.Token, "token", "", "Server token to authenticate printer")
+	flag.DurationVar(&config.JobTTL, "job-ttl", 5*time.Minute, "Job time-to-live, if job is older it will be cancelled")
 	flag.Parse()
 
 	// validate config
@@ -160,11 +162,21 @@ func run(ctx context.Context, cli printerpb.PrinterConnectorClient, printer *ipp
 			case msg := <-msgs:
 				switch m := msg.GetMessage().(type) {
 				case *printerpb.PrinterConnectorServerMessage_Print_:
-					job := m.Print.GetJob().GetId()
+					job := m.Print.GetJob()
 
-					log.Printf("Received print job #%v: %v", job, m.Print.GetJob().GetDocumentUrl())
+					log.Printf("Received print job #%v: %v", job.GetId(), job.GetDocumentUrl())
 
-					filename, mime, err := download(ctx, m.Print.GetJob().GetDocumentUrl())
+					if since := time.Since(job.GetCreatedAt().AsTime()); since > config.JobTTL {
+						log.Printf("Job is too old (created %v ago), skipping", since)
+
+						if err := stream.Send(messages.Report(printerpb.Job_CANCELLED)); err != nil {
+							return fmt.Errorf("failed to report job status: %w", err)
+						}
+
+						continue
+					}
+
+					filename, mime, err := download(ctx, job.GetDocumentUrl())
 					if err != nil {
 						return fmt.Errorf("failed to download document: %w", err)
 					}
@@ -174,7 +186,7 @@ func run(ctx context.Context, cli printerpb.PrinterConnectorClient, printer *ipp
 						return fmt.Errorf("failed to print document: %w", err)
 					}
 
-					log.Printf("Printing job #%v added to the queue under number %v", job, num)
+					log.Printf("Printing job #%v added to the queue under number %v", job.GetId(), num)
 
 					// mark job as completed right away
 					if err := stream.Send(messages.Report(printerpb.Job_COMPLETE)); err != nil {
