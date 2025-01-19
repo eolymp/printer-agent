@@ -6,12 +6,7 @@ BUILD_TAG?=${BUILD_COMMIT}
 # Dep target installs application dependencies
 .PHONY: dep
 dep:
-	go get ./...
-
-# Gen target generates code
-.PHONY: gen
-gen:
-	go generate ./...
+	go mod download
 
 # Test target runs tests
 .PHONY: test
@@ -30,10 +25,3 @@ build:
 .PHONY: lint
 lint:
 	go vet ./...
-
-.PHONY: ship
-ship: build
-	docker build --platform amd64 -t ghcr.io/eolymp/printer/printer:${BUILD_TAG} .
-	docker push ghcr.io/eolymp/printer/printer:${BUILD_TAG}
-
-	rm ${BUILD_PREFIX}eolymp-printer${BUILD_SUFFIX}

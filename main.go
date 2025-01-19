@@ -27,11 +27,12 @@ var version = "0.0.0"
 var commit = "HEAD"
 
 var config struct {
-	PrinterURL string
-	ServerURL  string
-	JobTTL     time.Duration
-	Space      string
-	Token      string
+	PrinterURL    string
+	ServerURL     string
+	Space         string
+	Token         string
+	JobTTL        time.Duration
+	LookupTimeout time.Duration
 }
 
 func main() {
@@ -50,9 +51,41 @@ func main() {
 	flag.StringVar(&config.Space, "space", "", "Space ID where printer is hosted")
 	flag.StringVar(&config.Token, "token", "", "Server token to authenticate printer")
 	flag.DurationVar(&config.JobTTL, "job-ttl", 5*time.Minute, "Job time-to-live, if job is older it will be cancelled")
+	flag.DurationVar(&config.LookupTimeout, "lookup-timeout", time.Minute, "A timeout for printer lookup")
 	flag.Parse()
 
 	// validate config
+	if config.PrinterURL == "" {
+		f := flag.CommandLine.Output()
+		_, _ = fmt.Fprintln(f, "You should provide -printer option to connect to the printer and start printing documents.")
+		_, _ = fmt.Fprintln(f, "Learn more: https://github.com/eolymp/printer-agent/blob/main/README.md")
+		_, _ = fmt.Fprintln(f, "")
+		_, _ = fmt.Fprintln(f, "Looking for available printers...")
+
+		ctx, cancel := context.WithTimeout(ctx, config.LookupTimeout)
+		defer cancel()
+
+		printers, err := ipp.Find(ctx)
+		if err != nil {
+			fmt.Fprintf(f, "Failed to find printers: %v\n", err)
+		}
+
+		count := 0
+		for printer := range printers {
+			fmt.Fprintf(f, "- %s (%s)\n", printer.URI, printer.State)
+			count++
+		}
+
+		if count == 0 {
+			_, _ = fmt.Fprintln(f, "No printers found.")
+		} else {
+			_, _ = fmt.Fprintln(f, "")
+			_, _ = fmt.Fprintln(f, "Please, restart this application with -printer option.")
+		}
+
+		os.Exit(0)
+	}
+
 	if config.Space == "" {
 		fail("Space ID is required, please add -space argument")
 	}
@@ -80,6 +113,7 @@ func main() {
 		if err := run(ctx, cli, printer); err != nil {
 			// this is a known error happening due to server IDLE timeout, ignore it
 			if strings.Contains(err.Error(), "stream terminated by RST_STREAM with error code: PROTOCOL_ERROR") {
+				log.Println("Connection closed due to inactivity, reconnecting...")
 				continue
 			}
 
@@ -103,7 +137,7 @@ func main() {
 }
 
 func fail(msg string, args ...any) {
-	_, _ = fmt.Fprintf(os.Stderr, "ERROR: "+msg+"\n\n", args...)
+	_, _ = fmt.Fprintf(os.Stderr, "ERROR: "+msg+"\n", args...)
 	flag.Usage()
 	os.Exit(-1)
 }

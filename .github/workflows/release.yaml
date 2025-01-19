@@ -29,12 +29,12 @@ jobs:
 
       - name: Build
         run: |
-          GOOS=linux GOARCH=amd64 BUILD_SUFFIX=-linux-amd64 make build
-          GOOS=linux GOARCH=arm64 BUILD_SUFFIX=-linux-arm64 make build
-          GOOS=darwin GOARCH=amd64 BUILD_SUFFIX=-darwin-amd64 make build
-          GOOS=darwin GOARCH=arm64 BUILD_SUFFIX=-darwin-arm64 make build
-          GOOS=windows GOARCH=amd64 BUILD_SUFFIX=-windows-amd64.exe make build
-          GOOS=windows GOARCH=arm64 BUILD_SUFFIX=-windows-arm64.exe make build
+          GOOS=linux GOARCH=amd64 BUILD_SUFFIX=-linux-amd64 BUILD_TAG=${GITHUB_REF#refs/*/} make build
+          GOOS=linux GOARCH=arm64 BUILD_SUFFIX=-linux-arm64 BUILD_TAG=${GITHUB_REF#refs/*/} make build
+          GOOS=darwin GOARCH=amd64 BUILD_SUFFIX=-darwin-amd64 BUILD_TAG=${GITHUB_REF#refs/*/} make build
+          GOOS=darwin GOARCH=arm64 BUILD_SUFFIX=-darwin-arm64 BUILD_TAG=${GITHUB_REF#refs/*/} make build
+          GOOS=windows GOARCH=amd64 BUILD_SUFFIX=-windows-amd64.exe BUILD_TAG=${GITHUB_REF#refs/*/} make build
+          GOOS=windows GOARCH=arm64 BUILD_SUFFIX=-windows-arm64.exe BUILD_TAG=${GITHUB_REF#refs/*/} make build
 
       - name: Release
         uses: softprops/action-gh-release@v1
