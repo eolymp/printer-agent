@@ -64,8 +64,6 @@ Looking for available printers...
 
 If your printer supports the IPP protocol natively, you can use the provided URI. If not, you may need to install an IPP server like [CUPS](https://www.cups.org/).
 
-If the printer requires SSL/TLS, use the `ipps` protocol instead of `ipp` (e.g., `ipps://localhost:631/printers/My_Printer`).
-
 For printers that require authentication, you can specify the username and password in the URI, such as:
 
 ```bash
