@@ -7,7 +7,7 @@ require (
 	github.com/eolymp/go-sdk v0.0.0-20260310090717-5421a9f87c7f
 	github.com/grandcat/zeroconf v1.0.0
 	golang.org/x/sync v0.20.0
-	google.golang.org/grpc v1.79.2
+	google.golang.org/grpc v1.79.3
 )
 
 require (
